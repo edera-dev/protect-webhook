@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  labels:
+    actions-ephemeral-runner: "true"
+  annotations:
+    dev.edera/kernel_verbose: "true"
+spec:
+  containers:
+    - name: test-container
+      image: nginx
