@@ -69,7 +69,7 @@ spec:
     spec:
       containers:
         - name: webhook-server
-          image: ttl.sh/cucumber/protect-webhook:latest@sha256:4a03eb2a47765818679daf9dea7722867b5360f6ac7061ef0099abb5a14d571e
+          image: ttl.sh/beet/protect-webhook:latest@sha256:b69b6ae2acbdc1915592138127f0d9698626f81b52774f760ef25126fbeb96fe
           imagePullPolicy: Always
           ports:
             - containerPort: 8443

@@ -1,0 +1,13 @@
+version: '3'
+
+vars:
+  REGISTRY: 'ttl.sh/beet'
+
+tasks:
+  build-*:
+    vars:
+      IMAGE: '{{index .MATCH 0}}'
+    cmds: 
+      - docker buildx build --platform linux/amd64 -t {{ .REGISTRY }}/{{ .IMAGE }}:latest .
+      - echo "Built {{ .REGISTRY }}/{{ .IMAGE }}:latest"
+      - docker push {{ .REGISTRY }}/{{ .IMAGE }}:latest
