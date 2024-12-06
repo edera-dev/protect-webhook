@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "protect-webhook.fullname" . }}
+  labels:
+    {{- include "protect-webhook.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 8443
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "protect-webhook.selectorLabels" . | nindent 4 }}

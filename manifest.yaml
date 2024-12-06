@@ -3,7 +3,6 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: self-signed
-  namespace: default
 spec:
   selfSigned: {}
 
@@ -12,7 +11,6 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: webhook-ca
-  namespace: default
 spec:
   isCA: true
   duration: 8760h # 1 year
@@ -27,7 +25,6 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: webhook-ca-issuer
-  namespace: default
 spec:
   ca:
     secretName: webhook-ca-secret
@@ -37,88 +34,87 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: webhook-server-cert
-  namespace: default
 spec:
   duration: 8760h # 1 year
   secretName: webhook-server-tls
   commonName: webhook-service.default.svc
   dnsNames:
-    - webhook-service.default.svc
-    - webhook-service.default.svc.cluster.local
+    - mutate-protect-webhook.edera-system.svc
+    - mutate-protect-webhook.edera-system.svc.cluster.local
   issuerRef:
     name: webhook-ca-issuer
     kind: Issuer
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: webhook-server
-  namespace: default
-  labels:
-    app: webhook-server
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: webhook-server
-  template:
-    metadata:
-      labels:
-        app: webhook-server
-    spec:
-      containers:
-        - name: webhook-server
-          image: ttl.sh/beet/protect-webhook:latest@sha256:b69b6ae2acbdc1915592138127f0d9698626f81b52774f760ef25126fbeb96fe
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8443
-              name: https
-          volumeMounts:
-            - name: webhook-tls
-              mountPath: /certs
-              readOnly: true
-      volumes:
-        - name: webhook-tls
-          secret:
-            secretName: webhook-server-tls
-      terminationGracePeriodSeconds: 30
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: webhook-service
-  namespace: default
-  labels:
-    app: webhook-server
-spec:
-  ports:
-    - port: 443
-      targetPort: 8443
-      protocol: TCP
-  selector:
-    app: webhook-server
-  type: ClusterIP
-
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  name: runtime-class-injector
-  annotations:
-    cert-manager.io/inject-ca-from: default/webhook-ca
-webhooks:
-  - name: runtime-class-injector.edera.dev
-    clientConfig:
-      service:
-        name: webhook-service
-        namespace: default
-        path: /mutate
-    rules:
-      - operations: ["CREATE"]
-        apiGroups: [""]
-        apiVersions: ["v1"]
-        resources: ["pods"]
-    admissionReviewVersions: ["v1"]
-    sideEffects: None
+#
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: webhook-server
+#   namespace: default
+#   labels:
+#     app: webhook-server
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: webhook-server
+#   template:
+#     metadata:
+#       labels:
+#         app: webhook-server
+#     spec:
+#       containers:
+#         - name: webhook-server
+#           image: ttl.sh/beet/protect-webhook:latest@sha256:b69b6ae2acbdc1915592138127f0d9698626f81b52774f760ef25126fbeb96fe
+#           imagePullPolicy: Always
+#           ports:
+#             - containerPort: 8443
+#               name: https
+#           volumeMounts:
+#             - name: webhook-tls
+#               mountPath: /certs
+#               readOnly: true
+#       volumes:
+#         - name: webhook-tls
+#           secret:
+#             secretName: webhook-server-tls
+#       terminationGracePeriodSeconds: 30
+#
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: webhook-service
+#   namespace: default
+#   labels:
+#     app: webhook-server
+# spec:
+#   ports:
+#     - port: 443
+#       targetPort: 8443
+#       protocol: TCP
+#   selector:
+#     app: webhook-server
+#   type: ClusterIP
+#
+# ---
+# apiVersion: admissionregistration.k8s.io/v1
+# kind: MutatingWebhookConfiguration
+# metadata:
+#   name: runtime-class-injector
+#   annotations:
+#     cert-manager.io/inject-ca-from: default/webhook-ca
+# webhooks:
+#   - name: runtime-class-injector.edera.dev
+#     clientConfig:
+#       service:
+#         name: webhook-service
+#         namespace: default
+#         path: /mutate
+#     rules:
+#       - operations: ["CREATE"]
+#         apiGroups: [""]
+#         apiVersions: ["v1"]
+#         resources: ["pods"]
+#     admissionReviewVersions: ["v1"]
+#     sideEffects: None

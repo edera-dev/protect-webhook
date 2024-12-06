@@ -1,0 +1,66 @@
+# Default values for protect-webhook.
+
+replicaCount: 1
+
+image:
+  repository: ttl.sh/beet/protect-webhook
+  # This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest@sha256:638b2f6e7765330d69c039a0654ed61e2566bdbee68b90e511da6feabd505651"
+
+# This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations:
+  cert-manager.io/inject-ca-from: edera-system/webhook-ca
+
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  type: ClusterIP
+  port: 443
+
+resources: {}
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# livenessProbe:
+#   httpGet:
+#     path: /
+#     port: https
+# readinessProbe:
+#   httpGet:
+#     path: /
+#     port: https
+
+# Additional volumes on the output Deployment definition.
+volumes:
+  - name: webhook-tls
+    secret:
+      secretName: webhook-server-tls
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts:
+  - name: webhook-tls
+    mountPath: /certs
+    readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+webhook:
+  serviceNamespace: edera-system
+  objectSelector:
+    matchLabels:
+      actions-ephemeral-runner: "true"
