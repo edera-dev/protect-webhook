@@ -96,9 +96,8 @@ jobs:
             pullstring="${tag}@${DIGEST}"
             echo "Signing ${pullstring}"
 
-            images+="${pullstring} "
+            cosign sign --yes "${pullstring}"
           done
-          cosign sign --yes "${images}"
         env:
           TAGS: '${{ steps.meta.outputs.tags }}'
           DIGEST: '${{ steps.push.outputs.digest }}'
