@@ -85,19 +85,22 @@ jobs:
           push: true
 
       - name: 'Install cosign'
-        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
 
       - name: 'Cosign sign all images'
         shell: bash
         run: |
-          for tag in $(echo '${{ steps.meta.outputs.tags }}'); do
+          images=""
+          for tag in ${TAGS}; do
             pullstring="${tag}@${DIGEST}"
             echo "Signing ${pullstring}"
-            cosign sign --yes "${pullstring}"
+
+            images+="${pullstring}"
           done
+          cosign sign --yes "${images}"
         env:
+          TAGS: '${{ steps.meta.outputs.tags }}'
           DIGEST: '${{ steps.push.outputs.digest }}'
-          COSIGN_EXPERIMENTAL: 'true'
 
   publish-helm-chart:
     needs: build-push-image
