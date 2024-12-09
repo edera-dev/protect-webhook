@@ -1,0 +1,150 @@
+name: Release Artifacts
+run-name: 'Release run by ${{ github.actor }}'
+
+on:
+  # Release unstable from HEAD on every merge
+  push:
+    branches:
+      - main
+
+  # Run manually to release unstable from HEAD
+  workflow_dispatch:
+
+  # Official stable versioned release
+  release:
+    types:
+    - published
+
+permissions:
+  contents: read
+
+jobs:
+  build-push-image:
+    name: 'Build and publish protect-${{ matrix.component }} images'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+        - webhook
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: 'Harden runner'
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: 'Checkout repository'
+        uses: actions/checkout@6b42224f41ee5dfe5395e27c8b2746f1f9955030 # v4.2.0
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: 'Setup docker buildx'
+        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
+
+      - name: 'Login to ghcr'
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: '${{ github.actor }}'
+          password: '${{ github.token }}'
+
+      - name: Docker meta
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+        id: meta
+        with:
+          images: |
+            ghcr.io/edera-dev/protect-${{ matrix.component }}
+          tags: |
+            # Tag with branch on push
+            type=ref,event=branch
+
+            # Tag with short sha on all events
+            type=sha,prefix=
+
+            # Tag version and stable on tag push
+            type=semver,pattern={{raw}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern=stable
+
+            # Tag nightly on schedule event
+            type=schedule,pattern=nightly
+
+      - name: 'Docker build and push protect-${{ inputs.component }}'
+        uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v6.7.0
+        id: push
+        with:
+          file: Dockerfile
+          platforms: linux/amd64
+          tags: '${{ steps.meta.outputs.tags }}'
+          push: true
+
+      - name: 'Install cosign'
+        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
+
+      - name: 'Cosign sign all images'
+        shell: bash
+        run: |
+          for tag in $(echo '${{ steps.meta.outputs.tags }}'); do
+            pullstring="${tag}@${DIGEST}"
+            echo "Signing ${pullstring}"
+            cosign sign --yes "${pullstring}"
+          done
+        env:
+          DIGEST: '${{ steps.push.outputs.digest }}'
+          COSIGN_EXPERIMENTAL: 'true'
+
+  publish-helm-chart:
+    needs: build-push-image
+    name: Publish Helm chart for protect-webhook
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: 'Harden runner'
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Resolve parameters
+        id: resolve_parameters
+        run: |
+          resolved_ref="${{ github.ref }}"
+          echo "INFO: Resolving short SHA for $resolved_ref"
+          echo "short_sha=$(git rev-parse --short $resolved_ref)" >> $GITHUB_OUTPUT
+          echo "INFO: Normalizing repository name (lowercase)"
+          echo "repository_owner=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Set up Helm
+        uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4.2
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Publish new helm chart for protect-webhook
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io --username ${{ github.actor }} --password-stdin
+          PROTECT_WEBHOOK_CHART_VERSION_TAG=$(cat charts/protect-webhook/Chart.yaml | grep version: | cut -d " " -f 2)
+          echo "PROTECT_WEBHOOK_CHART_VERSION_TAG=${PROTECT_WEBHOOK_CHART_VERSION_TAG}" >> $GITHUB_ENV
+          helm package charts/protect-webhook/ --version="${PROTECT_WEBHOOK_CHART_VERSION_TAG}"
+          helm push protect-webhook-"${PROTECT_WEBHOOK_CHART_VERSION_TAG}".tgz oci://ghcr.io/${{ steps.resolve_parameters.outputs.repository_owner }}/charts
+
+      - name: Job summary
+        run: |
+          echo "New helm chart for protect-webhook published successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Parameters:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Ref: ${{ steps.resolve_parameters.outputs.resolved_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Short SHA: ${{ steps.resolve_parameters.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- protect-webhook Chart version: ${{ env.PROTECT_WEBHOOK_CHART_VERSION_TAG }}" >> $GITHUB_STEP_SUMMARY
