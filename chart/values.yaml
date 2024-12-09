@@ -7,7 +7,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest@sha256:638b2f6e7765330d69c039a0654ed61e2566bdbee68b90e511da6feabd505651"
+  tag: "latest@sha256:c7c690744c66213d0792c4c6bcea99eb4c49da31f81ba18c9b774f7c0987a85e"
 
 # This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
@@ -24,6 +24,8 @@ podSecurityContext: {}
 
 securityContext: {}
 
+logLevel: info
+
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
   type: ClusterIP
@@ -32,14 +34,12 @@ service:
 resources: {}
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-# livenessProbe:
-#   httpGet:
-#     path: /
-#     port: https
-# readinessProbe:
-#   httpGet:
-#     path: /
-#     port: https
+livenessProbe:
+  tcpSocket:
+    port: 8443
+readinessProbe:
+  tcpSocket:
+    port: 8443
 
 # Additional volumes on the output Deployment definition.
 volumes:

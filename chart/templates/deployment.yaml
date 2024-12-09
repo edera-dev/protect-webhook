@@ -37,6 +37,9 @@ spec:
             - name: https
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+          env:
+            - name: RUST_LOG
+              value: debug
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:

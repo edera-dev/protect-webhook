@@ -44,7 +44,8 @@ async fn main() -> Result<()> {
     let key_file = env::var("WEBHOOK_KEY_FILE").unwrap_or("tls.key".to_string());
     info!("configured certs directory to: {}", certs_dir);
 
-    let routes = mutate().or(livez()).or(healthz());
+    // TODO: Make healthz and livez listen on http rather than https if they need to do more
+    let routes = routes();
 
     info!("listening on 8443");
     warp::serve(routes)
@@ -55,6 +56,10 @@ async fn main() -> Result<()> {
         .await;
 
     Ok(())
+}
+
+fn routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    mutate().or(livez()).or(healthz())
 }
 
 fn healthz() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
