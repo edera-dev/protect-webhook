@@ -76,7 +76,7 @@ jobs:
             # Tag nightly on schedule event
             type=schedule,pattern=nightly
 
-      - name: 'Docker build and push protect-${{ inputs.component }}'
+      - name: 'Docker build and push protect-${{ matrix.component }}'
         uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v6.7.0
         id: push
         with:
@@ -96,7 +96,7 @@ jobs:
             pullstring="${tag}@${DIGEST}"
             echo "Signing ${pullstring}"
 
-            images+="${pullstring}"
+            images+="${pullstring} "
           done
           cosign sign --yes "${images}"
         env:
