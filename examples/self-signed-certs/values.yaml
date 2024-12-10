@@ -1,12 +1,1 @@
-podAnnotations:
-  cert-manager.io/inject-ca-from: edera-system/webhook-ca
-
-volumes:
-  - name: webhook-tls
-    secret:
-      secretName: webhook-server-tls
-
-volumeMounts:
-  - name: webhook-tls
-    mountPath: /certs
-    readOnly: true
+../../charts/protect-webhook/ci/self-signed-values.yaml

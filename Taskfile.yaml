@@ -23,13 +23,12 @@ tasks:
             --set installCRDs=true
 
   install-self-signed-certs:
-    deps:
-      - install-cert-manager
     preconditions:
-      - test -f ./examples/self-signed-certs.yaml
+      - test -f ./examples/self-signed-certs/self-signed-certs.yaml
     cmds:
-      - kubectl apply -f ./examples/self-signed-certs.yaml
+      - kubectl create namespace edera-system
+      - kubectl apply -f ./examples/self-signed-certs/self-signed-certs.yaml -n edera-system
 
   chart-test:
     cmds:
-      - ct install --target-branch main
+      - ct install --target-branch main --namespace edera-system
