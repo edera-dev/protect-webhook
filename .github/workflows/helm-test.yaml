@@ -71,7 +71,7 @@ jobs:
               --create-namespace \
               --set installCRDs=true
           kubectl create namespace edera-system
-          kubectl apply -f ./examples/self-signed-certs.yaml \
+          kubectl apply -f ./examples/self-signed-certs/self-signed-certs.yaml \
               --namespace edera-system
 
       - name: Run chart-testing (install)
