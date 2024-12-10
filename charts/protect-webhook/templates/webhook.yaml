@@ -13,7 +13,7 @@ webhooks:
     clientConfig:
       service:
         name: {{ include "protect-webhook.fullname" . }}
-        namespace: {{ .Values.webhook.serviceNamespace | default "default" }}
+        namespace: {{ .Values.webhook.serviceNamespace | default .Release.Namespace }}
         path: /mutate
     {{- if .Values.webhook }}
     {{- if .Values.webhook.objectSelector }}

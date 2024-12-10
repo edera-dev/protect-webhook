@@ -1,56 +1,72 @@
 # Default values for protect-webhook.
 
+# -- Webhook server replica count
 replicaCount: 1
 
 image:
   repository: ghcr.io/edera-dev/protect-webhook
-  # This sets the pull policy for images.
+  # -- This sets the pull policy for images
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # -- Overrides the image tag whose default is the chart appVersion
   tag: "latest"
 
-# This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+# -- This is for the secretes for pulling an image from a private repository
 imagePullSecrets: []
-# This is to override the chart name.
+# -- This is to override the chart name
 nameOverride: ""
 fullnameOverride: ""
 
+# -- Webhook server pod annotations
 podAnnotations: {}
 
+# -- Webhook server pod labels
 podLabels: {}
 
+# -- Webhook server pod security context
 podSecurityContext: {}
 
+# -- Webhook server security context
 securityContext: {}
 
+# -- Webhook server log level
 logLevel: info
 
-# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+# -- Webhook server service definition
 service:
   type: ClusterIP
   port: 443
 
+# -- Webhook server resources
 resources: {}
 
-# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# -- Webhook server liveness probe
 livenessProbe:
   tcpSocket:
     port: 8443
+
+# -- Webhook server readiness probe
 readinessProbe:
   tcpSocket:
     port: 8443
 
-# Additional volumes on the output Deployment definition.
+# -- Webhook server additional volumes
 volumes: []
 
-# Additional volumeMounts on the output Deployment definition.
+# -- Webhook server additional volume mounts
 volumeMounts: []
 
+# -- Webhook server node selector
 nodeSelector: {}
 
+# -- Webhook server tolerations
 tolerations: []
 
+# -- Webhook server affinity
 affinity: {}
 
+# -- Mutating webhook configuration
 webhook:
-  serviceNamespace: edera-system
+  # -- This object selector lets you customize which labels you would like to filter on to inject the edera runtime class
+  objectSelector:
+    matchLabels:
+      dev.edera/inject-runtime: "true"

@@ -1,0 +1,46 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: self-signed
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: webhook-ca
+spec:
+  isCA: true
+  duration: 8760h # 1 year
+  secretName: webhook-ca-secret
+  commonName: webhook-ca
+  issuerRef:
+    name: self-signed
+    kind: Issuer
+
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: webhook-ca-issuer
+spec:
+  ca:
+    secretName: webhook-ca-secret
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: webhook-server-cert
+spec:
+  duration: 8760h # 1 year
+  secretName: webhook-server-tls
+  commonName: webhook-service.default.svc
+  dnsNames:
+    - mutate-protect-webhook.edera-system.svc
+    - mutate-protect-webhook.edera-system.svc.cluster.local
+  issuerRef:
+    name: webhook-ca-issuer
+    kind: Issuer
