@@ -29,3 +29,7 @@ tasks:
       - test -f ./examples/self-signed-certs.yaml
     cmds:
       - kubectl apply -f ./examples/self-signed-certs.yaml
+
+  chart-test:
+    cmds:
+      - ct install --target-branch main
