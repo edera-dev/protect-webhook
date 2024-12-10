@@ -23,6 +23,7 @@ webhooks:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     {{- end }}
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Ignore" }}
     {{- end }}
     rules:
       - operations: ["CREATE"]

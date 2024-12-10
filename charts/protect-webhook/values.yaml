@@ -3,11 +3,11 @@
 replicaCount: 1
 
 image:
-  repository: ttl.sh/beet/protect-webhook
+  repository: ghcr.io/edera-dev/protect-webhook
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest@sha256:c7c690744c66213d0792c4c6bcea99eb4c49da31f81ba18c9b774f7c0987a85e"
+  tag: "latest"
 
 # This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
@@ -15,8 +15,7 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-podAnnotations:
-  cert-manager.io/inject-ca-from: edera-system/webhook-ca
+podAnnotations: {}
 
 podLabels: {}
 
@@ -42,16 +41,10 @@ readinessProbe:
     port: 8443
 
 # Additional volumes on the output Deployment definition.
-volumes:
-  - name: webhook-tls
-    secret:
-      secretName: webhook-server-tls
+volumes: []
 
 # Additional volumeMounts on the output Deployment definition.
-volumeMounts:
-  - name: webhook-tls
-    mountPath: /certs
-    readOnly: true
+volumeMounts: []
 
 nodeSelector: {}
 
@@ -61,6 +54,3 @@ affinity: {}
 
 webhook:
   serviceNamespace: edera-system
-  objectSelector:
-    matchLabels:
-      actions-ephemeral-runner: "true"

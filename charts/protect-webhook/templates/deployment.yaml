@@ -39,7 +39,7 @@ spec:
               protocol: TCP
           env:
             - name: RUST_LOG
-              value: debug
+              value: {{ .Values.logLevel | default "info" }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:

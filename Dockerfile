@@ -4,8 +4,8 @@ ENV TARGET_LIBC=musl TARGET_VENDOR=unknown
 
 WORKDIR /usr/src/app
 COPY . .
-RUN cargo build --release --bin webhook
-RUN mv ./target/release/webhook /usr/sbin/protect-webhook
+RUN cargo build --release --bin protect-webhook
+RUN mv ./target/release/protect-webhook /usr/sbin/protect-webhook
 
 FROM scratch
 ENTRYPOINT ["/usr/sbin/protect-webhook"]
