@@ -1,13 +1,31 @@
 version: '3'
 
 vars:
-  REGISTRY: 'ttl.sh/beet'
+  REGISTRY: 'ttl.sh/protect'
 
 tasks:
-  build-*:
+  build-image:
     vars:
-      IMAGE: '{{index .MATCH 0}}'
+      IMAGE: 'protect-webhook'
     cmds: 
       - docker buildx build --platform linux/amd64 -t {{ .REGISTRY }}/{{ .IMAGE }}:latest .
       - echo "Built {{ .REGISTRY }}/{{ .IMAGE }}:latest"
       - docker push {{ .REGISTRY }}/{{ .IMAGE }}:latest
+
+  install-cert-manager:
+    cmds:
+      - helm repo add jetstack https://charts.jetstack.io
+      - helm repo update
+      - |
+        helm install cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --set installCRDs=true
+
+  install-self-signed-certs:
+    deps:
+      - install-cert-manager
+    preconditions:
+      - test -f ./examples/self-signed-certs.yaml
+    cmds:
+      - kubectl apply -f ./examples/self-signed-certs.yaml

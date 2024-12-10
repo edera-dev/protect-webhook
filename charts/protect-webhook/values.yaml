@@ -43,6 +43,7 @@ resources: {}
 livenessProbe:
   tcpSocket:
     port: 8443
+
 # -- Webhook server readiness probe
 readinessProbe:
   tcpSocket:
@@ -64,6 +65,9 @@ tolerations: []
 affinity: {}
 
 # -- Mutating webhook configuration
-webhook:
-  # -- Mutating webhook configuration for webhook server service namespace
-  serviceNamespace: edera-system
+webhook: {}
+  # This object selector lets you customize which labels you would like to
+  # filter on to inject the edera runtime class
+  # objectSelector:
+  #   matchLabels:
+  #     dev.edera/inject-runtime: true
