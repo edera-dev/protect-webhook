@@ -132,7 +132,7 @@ jobs:
         rustup default stable
 
     - name: 'cargo test'
-      run: ./hack/build/cargo.sh test
+      run: cargo test
 
   full-clippy:
     runs-on: ubuntu-latest
