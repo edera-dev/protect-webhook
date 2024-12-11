@@ -16,6 +16,9 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# -- Webhook server runtime class
+# runtimeClassName: edera
+
 # -- Webhook server pod annotations
 podAnnotations: {}
 
@@ -65,8 +68,8 @@ tolerations: []
 affinity: {}
 
 # -- Mutating webhook configuration
-webhook:
-  # -- This object selector lets you customize which labels you would like to filter on to inject the edera runtime class
-  objectSelector:
-    matchLabels:
-      dev.edera/inject-runtime: "true"
+webhook: {}
+  # This object selector lets you customize which labels you would like to filter on to inject the edera runtime class
+  # objectSelector:
+  #   matchLabels:
+  #     dev.edera/inject-runtime: "true"
