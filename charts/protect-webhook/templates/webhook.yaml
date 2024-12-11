@@ -15,6 +15,12 @@ webhooks:
         name: {{ include "protect-webhook.fullname" . }}
         namespace: {{ .Values.webhook.serviceNamespace | default .Release.Namespace }}
         path: /mutate
+    # Automatically exclude Edera resources
+    namespaceSelector:
+      matchExpressions:
+        - key: name
+          operator: NotIn
+          values: [{{ .Release.Namespace }}]
     {{- if .Values.webhook }}
     {{- if .Values.webhook.objectSelector }}
     objectSelector:
