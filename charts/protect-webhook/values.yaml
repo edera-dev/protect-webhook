@@ -16,6 +16,9 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# -- Webhook server runtime class
+# runtimeClassName: edera
+
 # -- Webhook server pod annotations
 podAnnotations: {}
 
