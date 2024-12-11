@@ -2,14 +2,6 @@ name: Release Artifacts
 run-name: 'Release run by ${{ github.actor }}'
 
 on:
-  # Release unstable from HEAD on every merge
-  push:
-    branches:
-      - main
-
-  # Run manually to release unstable from HEAD
-  workflow_dispatch:
-
   # Official stable versioned release
   release:
     types:
@@ -124,22 +116,27 @@ jobs:
       - name: Resolve parameters
         id: resolve_parameters
         run: |
-          resolved_ref="${{ github.ref }}"
-          echo "INFO: Resolving short SHA for $resolved_ref"
-          echo "short_sha=$(git rev-parse --short $resolved_ref)" >> $GITHUB_OUTPUT
+          echo "INFO: Resolving short SHA for ${GITHUB_REF}"
+          echo "short_sha=$(git rev-parse --short ${GITHUB_REF})" >> $GITHUB_OUTPUT
           echo "INFO: Normalizing repository name (lowercase)"
-          echo "repository_owner=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "repository_owner=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_REF: '${{ github.ref }}'
+          GITHUB_REPOSITORY_OWNER: '${{ github.repository_owner }}'
 
       - name: Set up Helm
         uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4.2
 
       - name: Publish new helm chart for protect-webhook
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io --username ${{ github.actor }} --password-stdin
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io --username ${GITHUB_ACTOR} --password-stdin
           PROTECT_WEBHOOK_CHART_VERSION_TAG=$(cat charts/protect-webhook/Chart.yaml | grep version: | cut -d " " -f 2)
           echo "PROTECT_WEBHOOK_CHART_VERSION_TAG=${PROTECT_WEBHOOK_CHART_VERSION_TAG}" >> $GITHUB_ENV
           helm package charts/protect-webhook/ --version="${PROTECT_WEBHOOK_CHART_VERSION_TAG}"
           helm push protect-webhook-"${PROTECT_WEBHOOK_CHART_VERSION_TAG}".tgz oci://ghcr.io/${{ steps.resolve_parameters.outputs.repository_owner }}/charts
+        env:
+          GITHUB_ACTOR: '${{ github.actor }}'
+          GITHUB_REPOSITORY_OWNER: '${{ github.repository_owner }}'
 
       - name: Job summary
         run: |

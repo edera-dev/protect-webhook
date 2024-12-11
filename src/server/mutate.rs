@@ -94,6 +94,8 @@ mod tests {
         let admission_review = AdmissionReview {
             request: Some(AdmissionRequest {
                 uid: "test-uid".to_string(),
+                name: "test-name".to_string(),
+                namespace: "test-namespace".to_string(),
             }),
         };
 
@@ -138,7 +140,9 @@ mod tests {
 
         let admission_review = json!({
             "request": {
-                "uid": "test-uid"
+                "uid": "test-uid",
+                "name": "test-name",
+                "namespace": "test-namespace",
             }
         });
 

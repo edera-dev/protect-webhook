@@ -1,6 +1,6 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use log::info;
-use std::env;
+use std::{env, fs};
 use warp::Filter;
 
 mod healthz;
@@ -13,10 +13,55 @@ fn routes() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> 
         .or(healthz::handler())
 }
 
-pub async fn start() -> Result<()> {
+fn set_certs_dir() -> Result<String> {
     let certs_dir = env::var("WEBHOOK_CERTS_DIR").unwrap_or("/certs".to_string());
+
+    let meta = match fs::metadata(&certs_dir) {
+        Err(e) => return Err(anyhow!("Error reading metadata for {}: {}", certs_dir, e)),
+        Ok(meta) => meta,
+    };
+
+    if !meta.is_dir() {
+        return Err(anyhow!("{} is not a directory", certs_dir));
+    }
+
+    Ok(certs_dir)
+}
+
+fn set_crt_file() -> Result<String> {
     let crt_file = env::var("WEBHOOK_CRT_FILE").unwrap_or("tls.crt".to_string());
+
+    let meta = match fs::metadata(&crt_file) {
+        Err(e) => return Err(anyhow!("Error reading metadata for {}: {}", crt_file, e)),
+        Ok(meta) => meta,
+    };
+
+    if !meta.is_file() {
+        return Err(anyhow!("{} is not a file", crt_file));
+    }
+
+    Ok(crt_file)
+}
+
+fn set_key_file() -> Result<String> {
     let key_file = env::var("WEBHOOK_KEY_FILE").unwrap_or("tls.key".to_string());
+
+    let meta = match fs::metadata(&key_file) {
+        Err(e) => return Err(anyhow!("Error reading metadata for {}: {}", key_file, e)),
+        Ok(meta) => meta,
+    };
+
+    if !meta.is_file() {
+        return Err(anyhow!("{} is not a file", key_file));
+    }
+
+    Ok(key_file)
+}
+
+pub async fn start() -> Result<()> {
+    let certs_dir = set_certs_dir()?;
+    let crt_file = set_crt_file()?;
+    let key_file = set_key_file()?;
     info!("configured certs directory to: {}", certs_dir);
 
     // TODO: Make healthz and livez listen on http rather than https if they need to do more
