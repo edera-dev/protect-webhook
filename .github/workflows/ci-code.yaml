@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - src/**
+      - Cargo.*
       - .github/workflows/ci-code.yaml
 
 jobs:
