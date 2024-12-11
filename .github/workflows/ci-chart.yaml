@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - charts/**
-      - .github/workflows/helm-test.yaml
+      - .github/workflows/ci-chart.yaml
 
 jobs:
   lint-test:
