@@ -108,7 +108,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           submodules: recursive
           persist-credentials: false
@@ -120,6 +120,8 @@ jobs:
           echo "short_sha=$(git rev-parse --short ${GITHUB_REF})" >> $GITHUB_OUTPUT
           echo "INFO: Normalizing repository name (lowercase)"
           echo "repository_owner=$(echo ${GITHUB_REPOSITORY_OWNER} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          PROTECT_WEBHOOK_CHART_VERSION_TAG=$(cat charts/protect-webhook/Chart.yaml | grep version: | cut -d " " -f 2)
+          echo "protect_webhook_chart_version_tag=${PROTECT_WEBHOOK_CHART_VERSION_TAG}" >> $GITHUB_OUTPUT
         env:
           GITHUB_REF: '${{ github.ref }}'
           GITHUB_REPOSITORY_OWNER: '${{ github.repository_owner }}'
@@ -130,19 +132,22 @@ jobs:
       - name: Publish new helm chart for protect-webhook
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io --username ${GITHUB_ACTOR} --password-stdin
-          PROTECT_WEBHOOK_CHART_VERSION_TAG=$(cat charts/protect-webhook/Chart.yaml | grep version: | cut -d " " -f 2)
-          echo "PROTECT_WEBHOOK_CHART_VERSION_TAG=${PROTECT_WEBHOOK_CHART_VERSION_TAG}" >> $GITHUB_ENV
           helm package charts/protect-webhook/ --version="${PROTECT_WEBHOOK_CHART_VERSION_TAG}"
-          helm push protect-webhook-"${PROTECT_WEBHOOK_CHART_VERSION_TAG}".tgz oci://ghcr.io/${{ steps.resolve_parameters.outputs.repository_owner }}/charts
+          helm push protect-webhook-"${PROTECT_WEBHOOK_CHART_VERSION_TAG}".tgz oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/charts
         env:
           GITHUB_ACTOR: '${{ github.actor }}'
-          GITHUB_REPOSITORY_OWNER: '${{ github.repository_owner }}'
+          GITHUB_REPOSITORY_OWNER: '${{ steps.resolve_parameters.outputs.repository_owner }}'
+          PROTECT_WEBHOOK_CHART_VERSION_TAG: '${{ steps.resolve_parameters.outputs.protect_webhook_chart_version_tag }}'
 
       - name: Job summary
         run: |
           echo "New helm chart for protect-webhook published successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Parameters:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Ref: ${{ steps.resolve_parameters.outputs.resolved_ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Short SHA: ${{ steps.resolve_parameters.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- protect-webhook Chart version: ${{ env.PROTECT_WEBHOOK_CHART_VERSION_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Ref: ${RESOLVED_REF}" >> $GITHUB_STEP_SUMMARY
+          echo "- Short SHA: ${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
+          echo "- protect-webhook Chart version: ${PROTECT_WEBHOOK_CHART_VERSION_TAG}" >> $GITHUB_STEP_SUMMARY
+        env:
+          RESOLVED_REF: '${{ steps.resolve_parameters.outputs.resolved_ref }}'
+          SHORT_SHA: '${{ steps.resolve_parameters.outputs.short_sha }}'
+          PROTECT_WEBHOOK_CHART_VERSION_TAG: '${{ steps.resolve_parameters.outputs.protect_webhook_chart_version_tag }}'
