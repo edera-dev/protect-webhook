@@ -27,31 +27,12 @@
     "namespace": "default",
     "operation": "CREATE",
     "userInfo": {
-      "username": "arn:aws:sts::904233120312:assumed-role/AWSReservedSSO_AdministratorAccess_941c87aedc3ddaa7/james-edera.dev",
-      "uid": "aws-iam-authenticator:904233120312:AROA5FCD6OI4CR7TBCJYI",
+      "username": "test",
+      "uid": "uid",
       "groups": [
         "system:authenticated"
       ],
-      "extra": {
-        "accessKeyId": [
-          "ASIA5FCD6OI4PEVLQUMP"
-        ],
-        "arn": [
-          "arn:aws:sts::904233120312:assumed-role/AWSReservedSSO_AdministratorAccess_941c87aedc3ddaa7/james@edera.dev"
-        ],
-        "canonicalArn": [
-          "arn:aws:iam::904233120312:role/AWSReservedSSO_AdministratorAccess_941c87aedc3ddaa7"
-        ],
-        "principalId": [
-          "AROA5FCD6OI4CR7TBCJYI"
-        ],
-        "sessionName": [
-          "james@edera.dev"
-        ],
-        "sigs.k8s.io/aws-iam-authenticator/principalId": [
-          "AROA5FCD6OI4CR7TBCJYI"
-        ]
-      }
+      "extra": {}
     },
     "object": {
       "kind": "Pod",
