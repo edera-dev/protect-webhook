@@ -28,3 +28,7 @@ helm upgrade --install mutate oci://ghcr.io/edera-dev/charts/protect-webhook \
 ### Troubleshooting
 
 If you're running into issues, please file an issue!
+
+## Developing
+
+See [developing guide](./DEVELOPING.md)
