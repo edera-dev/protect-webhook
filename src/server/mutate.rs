@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use base64::prelude::*;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,7 @@ struct AdmissionRequest {
     uid: String,
     name: String,
     namespace: String,
+    runtimeclass: String, 
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -53,33 +54,39 @@ async fn mutate_internal(review: AdmissionReview) -> Result<impl warp::Reply, wa
         return Ok(warp::reply::with_status(
             warp::reply::json(&error_response),
             warp::http::StatusCode::BAD_REQUEST,
-        ));
+        ))
     };
+    // Only do an update operation if there is
+    // no class set already 
+    if request.runtimeclass.is_empty() {
+        let patch = r#"[{
+            "op": "add",
+            "path": "/spec/runtimeClassName",
+            "value": "edera"
+        }]"#;
+        let patch = BASE64_STANDARD.encode(patch);
 
-    let patch = r#"[{
-        "op": "add",
-        "path": "/spec/runtimeClassName",
-        "value": "edera"
-    }]"#;
-    let patch = BASE64_STANDARD.encode(patch);
+        let response = AdmissionReviewResponse {
+            api_version: "admission.k8s.io/v1".to_string(),
+            kind: "AdmissionReview".to_string(),
+            response: Some(Response {
+                uid: request.uid,
+                allowed: true,
+                patch_type: Some("JSONPatch".to_string()),
+                patch: Some(patch),
+            }),
+        };
 
-    let response = AdmissionReviewResponse {
-        api_version: "admission.k8s.io/v1".to_string(),
-        kind: "AdmissionReview".to_string(),
-        response: Some(Response {
-            uid: request.uid,
-            allowed: true,
-            patch_type: Some("JSONPatch".to_string()),
-            patch: Some(patch),
-        }),
-    };
-
-    info!("mutating {}/{}", request.namespace, request.name);
-    debug!("payload {:?}", response);
-    Ok(warp::reply::with_status(
-        warp::reply::json(&response),
-        warp::http::StatusCode::OK,
-    ))
+        info!("mutating {}/{}", request.namespace, request.name);
+        debug!("payload {:?}", response);
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&response),
+            warp::http::StatusCode::OK,
+        ))
+    } else {
+        // schristoff(TODO): is it ok?
+        return Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -96,6 +103,7 @@ mod tests {
                 uid: "test-uid".to_string(),
                 name: "test-name".to_string(),
                 namespace: "test-namespace".to_string(),
+                runtimeclass: String::new(),
             }),
         };
 
