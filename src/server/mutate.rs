@@ -114,7 +114,9 @@ async fn mutate_internal(review: AdmissionReview) -> Result<impl warp::Reply, wa
     // Determine patch path based on object kind. Default to pod.
     let patch_path = if let Some(kind_info) = &request.kind {
         match kind_info.kind.as_str() {
-            "Deployment" | "ReplicaSet" | "StatefulSet" => "/spec/template/spec/runtimeClassName",
+            "Deployment" | "ReplicaSet" | "StatefulSet" | "DaemonSet" => {
+                "/spec/template/spec/runtimeClassName"
+            }
             _ => "/spec/runtimeClassName",
         }
     } else {
