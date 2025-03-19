@@ -1,5 +1,6 @@
 use anyhow::Result;
 use base64::prelude::*;
+use bytes::Bytes;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -13,8 +14,34 @@ struct AdmissionReview {
 #[derive(Deserialize, Debug, Clone)]
 struct AdmissionRequest {
     uid: String,
-    name: String,
+    kind: Option<KindInfo>,
+    object: K8sObject,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    namespace: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct K8sObject {
+    metadata: Metadata,
+    // include spec if needed in the future
+    // spec: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct Metadata {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    #[serde(rename = "generateName")]
+    generate_name: Option<String>,
     namespace: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct KindInfo {
+    kind: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -34,13 +61,32 @@ struct Response {
     patch: Option<String>,
 }
 
+#[derive(Debug)]
+struct JsonDeserializeError {
+    message: String,
+}
+
+impl warp::reject::Reject for JsonDeserializeError {}
+
 pub fn handler() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let base_path = warp::path!("mutate");
 
     base_path
         .and(warp::post())
-        .and(warp::body::json())
+        .and(warp::body::bytes())
+        .and_then(log_and_deserialize)
         .and_then(mutate_internal)
+}
+
+async fn log_and_deserialize(body: Bytes) -> Result<AdmissionReview, warp::Rejection> {
+    let raw_body = String::from_utf8_lossy(&body);
+    debug!("Received raw body:\n{}", raw_body);
+    serde_json::from_slice::<AdmissionReview>(&body).map_err(|err| {
+        error!("Failed to deserialize AdmissionReview: {:?}", err);
+        warp::reject::custom(JsonDeserializeError {
+            message: err.to_string(),
+        })
+    })
 }
 
 async fn mutate_internal(review: AdmissionReview) -> Result<impl warp::Reply, warp::Rejection> {
@@ -56,12 +102,30 @@ async fn mutate_internal(review: AdmissionReview) -> Result<impl warp::Reply, wa
         ));
     };
 
-    let patch = r#"[{
-        "op": "add",
-        "path": "/spec/runtimeClassName",
-        "value": "edera"
-    }]"#;
-    let patch = BASE64_STANDARD.encode(patch);
+    // Get name, falling back to generateName if name is missing.
+    let metadata = request.object.metadata;
+    let name = metadata.name.unwrap_or_else(|| {
+        metadata
+            .generate_name
+            .unwrap_or_else(|| "unknown".to_string())
+    });
+    let namespace = metadata.namespace;
+
+    // Determine patch path based on object kind. Default to pod.
+    let patch_path = if let Some(kind_info) = &request.kind {
+        match kind_info.kind.as_str() {
+            "Deployment" | "ReplicaSet" | "StatefulSet" => "/spec/template/spec/runtimeClassName",
+            _ => "/spec/runtimeClassName",
+        }
+    } else {
+        "/spec/runtimeClassName"
+    };
+
+    let patch_template = format!(
+        r#"[{{ "op": "add", "path": "{}", "value": "edera" }}]"#,
+        patch_path
+    );
+    let patch = BASE64_STANDARD.encode(patch_template.as_bytes());
 
     let response = AdmissionReviewResponse {
         api_version: "admission.k8s.io/v1".to_string(),
@@ -74,7 +138,7 @@ async fn mutate_internal(review: AdmissionReview) -> Result<impl warp::Reply, wa
         }),
     };
 
-    info!("mutating {}/{}", request.namespace, request.name);
+    info!("mutating {}/{}", namespace, name);
     debug!("payload {:?}", response);
     Ok(warp::reply::with_status(
         warp::reply::json(&response),
@@ -94,8 +158,18 @@ mod tests {
         let admission_review = AdmissionReview {
             request: Some(AdmissionRequest {
                 uid: "test-uid".to_string(),
-                name: "test-name".to_string(),
-                namespace: "test-namespace".to_string(),
+                kind: Some(KindInfo {
+                    kind: "Pod".to_string(),
+                }),
+                object: K8sObject {
+                    metadata: Metadata {
+                        name: Some("test-name".to_string()),
+                        generate_name: None,
+                        namespace: "test-namespace".to_string(),
+                    },
+                },
+                name: None,
+                namespace: None,
             }),
         };
 
@@ -141,8 +215,15 @@ mod tests {
         let admission_review = json!({
             "request": {
                 "uid": "test-uid",
-                "name": "test-name",
-                "namespace": "test-namespace",
+                "kind": {
+                    "kind": "Pod"
+                },
+                "object": {
+                    "metadata": {
+                        "name": "test-name",
+                        "namespace": "test-namespace"
+                    }
+                }
             }
         });
 
