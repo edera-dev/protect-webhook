@@ -102,7 +102,7 @@ async fn mutate_internal(review: AdmissionReview) -> Result<impl warp::Reply, wa
         ));
     };
 
-    // Get name, falling back to generateName if name is missing.
+    // Get name and namespace from the object's metadata.
     let metadata = request.object.metadata;
     let name = metadata.name.unwrap_or_else(|| {
         metadata
@@ -110,6 +110,24 @@ async fn mutate_internal(review: AdmissionReview) -> Result<impl warp::Reply, wa
             .unwrap_or_else(|| "unknown".to_string())
     });
     let namespace = metadata.namespace;
+
+    // Prevent mutating resources in the kube-system namespace
+    if namespace == "kube-system" {
+        info!("skipping mutation for {} in kube-system namespace", name);
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&AdmissionReviewResponse {
+                api_version: "admission.k8s.io/v1".to_string(),
+                kind: "AdmissionReview".to_string(),
+                response: Some(Response {
+                    uid: request.uid,
+                    allowed: true,
+                    patch_type: None,
+                    patch: None,
+                }),
+            }),
+            warp::http::StatusCode::OK,
+        ));
+    }
 
     // Determine patch path based on object kind. Default to pod.
     let patch_path = if let Some(kind_info) = &request.kind {
