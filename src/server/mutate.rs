@@ -156,7 +156,7 @@ mod tests {
     use warp::Reply;
 
     #[tokio::test]
-    async fn test_mutate_function() {
+    async fn test_mutate_pod() {
         let admission_review = AdmissionReview {
             request: Some(AdmissionRequest {
                 uid: "test-uid".to_string(),
@@ -191,7 +191,7 @@ mod tests {
         assert!(response.allowed);
         assert_eq!(response.patch_type, Some("JSONPatch".to_string()));
 
-        // Decode and verify the patch
+        // Decode and verify the patch for a Pod
         let patch_base64 = response.patch.unwrap();
         let patch_json: Value = serde_json::from_str(
             &String::from_utf8(BASE64_STANDARD.decode(patch_base64).unwrap()).unwrap(),
@@ -201,6 +201,58 @@ mod tests {
         let expected_patch = json!([{
             "op": "add",
             "path": "/spec/runtimeClassName",
+            "value": "edera",
+        }]);
+
+        assert_eq!(patch_json, expected_patch);
+    }
+
+    #[tokio::test]
+    async fn test_mutate_replicaset() {
+        let admission_review = AdmissionReview {
+            request: Some(AdmissionRequest {
+                uid: "replicaset-uid".to_string(),
+                kind: Some(KindInfo {
+                    kind: "ReplicaSet".to_string(),
+                }),
+                object: K8sObject {
+                    metadata: Metadata {
+                        name: Some("rs-name".to_string()),
+                        generate_name: None,
+                        namespace: "rs-namespace".to_string(),
+                    },
+                },
+                name: None,
+                namespace: None,
+            }),
+        };
+
+        let response = mutate_internal(admission_review).await.unwrap();
+        let body = warp::hyper::body::to_bytes(response.into_response().into_body())
+            .await
+            .unwrap();
+        let result: AdmissionReviewResponse = serde_json::from_slice(&body).unwrap();
+
+        // Check the response structure
+        assert_eq!(result.api_version, "admission.k8s.io/v1");
+        assert_eq!(result.kind, "AdmissionReview");
+        assert!(result.response.is_some());
+
+        let response = result.response.unwrap();
+        assert_eq!(response.uid, "replicaset-uid");
+        assert!(response.allowed);
+        assert_eq!(response.patch_type, Some("JSONPatch".to_string()));
+
+        // Decode and verify the patch for a ReplicaSet
+        let patch_base64 = response.patch.unwrap();
+        let patch_json: Value = serde_json::from_str(
+            &String::from_utf8(BASE64_STANDARD.decode(patch_base64).unwrap()).unwrap(),
+        )
+        .unwrap();
+
+        let expected_patch = json!([{
+            "op": "add",
+            "path": "/spec/template/spec/runtimeClassName",
             "value": "edera",
         }]);
 
