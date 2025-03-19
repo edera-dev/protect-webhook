@@ -400,4 +400,53 @@ mod tests {
 
         assert_eq!(patch_json, expected_patch);
     }
+
+    #[tokio::test]
+    async fn test_mutate_daemonset() {
+        let admission_review = AdmissionReview {
+            request: Some(AdmissionRequest {
+                uid: "daemonset-uid".to_string(),
+                kind: Some(KindInfo {
+                    kind: "DaemonSet".to_string(),
+                }),
+                object: K8sObject {
+                    metadata: Metadata {
+                        name: Some("daemonset-name".to_string()),
+                        generate_name: None,
+                        namespace: "daemonset-namespace".to_string(),
+                    },
+                },
+                name: None,
+                namespace: None,
+            }),
+        };
+
+        let response = mutate_internal(admission_review).await.unwrap();
+        let body = warp::hyper::body::to_bytes(response.into_response().into_body())
+            .await
+            .unwrap();
+        let result: AdmissionReviewResponse = serde_json::from_slice(&body).unwrap();
+
+        // Verify overall structure
+        assert_eq!(result.api_version, "admission.k8s.io/v1");
+        assert_eq!(result.kind, "AdmissionReview");
+        let resp = result.response.expect("response missing");
+        assert_eq!(resp.uid, "daemonset-uid");
+        assert!(resp.allowed);
+        assert_eq!(resp.patch_type, Some("JSONPatch".to_string()));
+
+        // Decode and verify the patch for a DaemonSet (uses embedded pod template spec)
+        let patch_base64 = resp.patch.expect("patch missing");
+        let patch_bytes = BASE64_STANDARD.decode(patch_base64).unwrap();
+        let patch_str = String::from_utf8(patch_bytes).unwrap();
+        let patch_json: Value = serde_json::from_str(&patch_str).unwrap();
+
+        let expected_patch = json!([{
+            "op": "add",
+            "path": "/spec/template/spec/runtimeClassName",
+            "value": "edera"
+        }]);
+
+        assert_eq!(patch_json, expected_patch);
+    }
 }
