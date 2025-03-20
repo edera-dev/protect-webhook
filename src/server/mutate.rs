@@ -467,4 +467,42 @@ mod tests {
 
         assert_eq!(patch_json, expected_patch);
     }
+
+    #[tokio::test]
+    async fn test_kube_system_not_mutated() {
+        let admission_review = AdmissionReview {
+            request: Some(AdmissionRequest {
+                uid: "kube-system-uid".to_string(),
+                kind: Some(KindInfo {
+                    kind: "Pod".to_string(),
+                }),
+                object: K8sObject {
+                    metadata: Metadata {
+                        name: Some("kube-workload".to_string()),
+                        generate_name: None,
+                        namespace: "kube-system".to_string(),
+                    },
+                },
+                name: None,
+                namespace: None,
+            }),
+        };
+
+        let response = mutate_internal(admission_review).await.unwrap();
+        let body = warp::hyper::body::to_bytes(response.into_response().into_body())
+            .await
+            .unwrap();
+        let result: AdmissionReviewResponse = serde_json::from_slice(&body).unwrap();
+
+        // Verify overall structure
+        assert_eq!(result.api_version, "admission.k8s.io/v1");
+        assert_eq!(result.kind, "AdmissionReview");
+        let resp = result.response.expect("response missing");
+
+        // Ensure that the UID is preserved but no patch is applied
+        assert_eq!(resp.uid, "kube-system-uid");
+        assert!(resp.allowed);
+        assert_eq!(resp.patch_type, None);
+        assert_eq!(resp.patch, None);
+    }
 }
