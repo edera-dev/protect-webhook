@@ -9,6 +9,9 @@ on:
       - Cargo.*
       - .github/workflows/ci-code.yaml
 
+permissions:
+  contents: read
+
 jobs:
   rustfmt:
     name: rustfmt
