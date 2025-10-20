@@ -8,7 +8,7 @@ on:
     - published
 
 permissions:
-  contents: read
+  contents: read # Default token to read
 
 jobs:
   build-push-image:
@@ -20,8 +20,8 @@ jobs:
         component:
         - webhook
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Needed to check out code
+      packages: write # Needed to write image to ghcr
       id-token: write # Needed for cosign to use github OIDC token
     steps:
       - name: 'Harden runner'
@@ -101,8 +101,8 @@ jobs:
     name: Publish Helm chart for protect-webhook
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Needed to check out code
+      packages: write # Needed to write helm chart to ghcr
     steps:
       - name: 'Harden runner'
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
@@ -133,10 +133,11 @@ jobs:
 
       - name: Publish new helm chart for protect-webhook
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io --username ${GITHUB_ACTOR} --password-stdin
+          echo "${GH_TOKEN}" | helm registry login ghcr.io --username ${GITHUB_ACTOR} --password-stdin
           helm package charts/protect-webhook/ --version="${PROTECT_WEBHOOK_CHART_VERSION_TAG}"
           helm push protect-webhook-"${PROTECT_WEBHOOK_CHART_VERSION_TAG}".tgz oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/charts
         env:
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           GITHUB_ACTOR: '${{ github.actor }}'
           GITHUB_REPOSITORY_OWNER: '${{ steps.resolve_parameters.outputs.repository_owner }}'
           PROTECT_WEBHOOK_CHART_VERSION_TAG: '${{ steps.resolve_parameters.outputs.protect_webhook_chart_version_tag }}'
